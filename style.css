@@ -134,6 +134,19 @@ footer {
 .content-body h3 {
     margin-top: 1.2rem;
     margin-bottom: 0.6rem;
+    line-height: 1.3;
+}
+
+.content-body h1 {
+    font-size: 1.8rem;
+}
+
+.content-body h2 {
+    font-size: 1.4rem;
+}
+
+.content-body h3 {
+    font-size: 1.15rem;
 }
 
 .content-body ul,
