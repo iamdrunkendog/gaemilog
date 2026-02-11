@@ -30,8 +30,56 @@ def get_diary_list():
             if markdown is not None:
                 html_content = markdown.markdown(clean_content)
             else:
-                paragraphs = [p.strip() for p in clean_content.split("\n\n") if p.strip()]
-                html_content = "".join(f"<p>{p}</p>" for p in paragraphs)
+                lines = clean_content.splitlines()
+                html_parts = []
+                paragraph_buf = []
+
+                def flush_paragraph():
+                    nonlocal paragraph_buf
+                    if paragraph_buf:
+                        text = " ".join(s.strip() for s in paragraph_buf if s.strip())
+                        if text:
+                            html_parts.append(f"<p>{text}</p>")
+                        paragraph_buf = []
+
+                for line in lines:
+                    s = line.strip()
+                    if not s:
+                        flush_paragraph()
+                        continue
+
+                    if s.startswith("### "):
+                        flush_paragraph()
+                        html_parts.append(f"<h3>{s[4:].strip()}</h3>")
+                    elif s.startswith("## "):
+                        flush_paragraph()
+                        html_parts.append(f"<h2>{s[3:].strip()}</h2>")
+                    elif s.startswith("# "):
+                        flush_paragraph()
+                        html_parts.append(f"<h1>{s[2:].strip()}</h1>")
+                    elif s.startswith("- "):
+                        flush_paragraph()
+                        html_parts.append(f"<li>{s[2:].strip()}</li>")
+                    else:
+                        paragraph_buf.append(s)
+
+                flush_paragraph()
+
+                # 간단한 ul 래핑 처리
+                normalized = []
+                in_list = False
+                for part in html_parts:
+                    if part.startswith("<li>") and not in_list:
+                        normalized.append("<ul>")
+                        in_list = True
+                    if not part.startswith("<li>") and in_list:
+                        normalized.append("</ul>")
+                        in_list = False
+                    normalized.append(part)
+                if in_list:
+                    normalized.append("</ul>")
+
+                html_content = "".join(normalized)
 
             diaries.append({
                 "date": f.replace(".md", ""),
