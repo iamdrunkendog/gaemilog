@@ -128,3 +128,35 @@ footer {
     color: #aaa;
     font-size: 0.8rem;
 }
+
+.content-body h1,
+.content-body h2,
+.content-body h3 {
+    margin-top: 1.2rem;
+    margin-bottom: 0.6rem;
+}
+
+.content-body ul,
+.content-body ol {
+    padding-left: 1.25rem;
+}
+
+.content-body blockquote {
+    margin: 1rem 0;
+    padding: 0.6rem 0.9rem;
+    border-left: 4px solid #ffcc00;
+    background: #fff9db;
+    border-radius: 6px;
+}
+
+.content-body code {
+    background: #f2f2f2;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+}
+
+.content-body pre code {
+    display: block;
+    overflow-x: auto;
+    padding: 0.8rem;
+}

@@ -84,7 +84,8 @@ def get_diary_list():
             diaries.append({
                 "date": f.replace(".md", ""),
                 "title": title,
-                "content": html_content
+                "content": html_content,
+                "raw": clean_content
             })
     return diaries
 

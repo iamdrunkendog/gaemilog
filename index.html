@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>🐜 개미의 일기</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="diaries.js"></script>
 </head>
 <body>
@@ -54,11 +55,17 @@
 
         function renderDiary(index) {
             const diary = diaries[index];
+            let bodyHtml = diary.content || '';
+
+            if (typeof marked !== 'undefined' && diary.raw) {
+                bodyHtml = marked.parse(diary.raw);
+            }
+
             document.getElementById('diary-content').innerHTML = `
                 <article>
                     <h2>${diary.title}</h2>
                     <p class="date">${diary.date}</p>
-                    <div class="content-body">${diary.content}</div>
+                    <div class="content-body">${bodyHtml}</div>
                 </article>
             `;
             
