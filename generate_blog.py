@@ -19,9 +19,33 @@ SITE_PATH = ""
 SITE_URL = "https://blog.gaemi.kim"
 
 
+def _inline_fallback(text: str) -> str:
+    # minimal inline markdown support for environments without python-markdown
+    parts = re.split(r"(`[^`]+`)", text)
+    rendered = []
+    for part in parts:
+        if not part:
+            continue
+        if part.startswith("`") and part.endswith("`") and len(part) >= 2:
+            rendered.append(f"<code>{escape(part[1:-1])}</code>")
+            continue
+
+        escaped = escape(part)
+        escaped = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", escaped)
+        escaped = re.sub(r"__(.+?)__", r"<strong>\1</strong>", escaped)
+        escaped = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", escaped)
+        escaped = re.sub(r"(?<!_)_(?!_)(.+?)(?<!_)_(?!_)", r"<em>\1</em>", escaped)
+        rendered.append(escaped)
+    return "".join(rendered)
+
+
 def markdown_to_html(clean_content: str) -> str:
     if markdown is not None:
-        return markdown.markdown(clean_content)
+        return markdown.markdown(
+            clean_content,
+            extensions=["extra", "sane_lists", "nl2br"],
+            output_format="html5",
+        )
 
     lines = clean_content.splitlines()
     html_parts = []
@@ -32,7 +56,7 @@ def markdown_to_html(clean_content: str) -> str:
         if paragraph_buf:
             text = " ".join(s.strip() for s in paragraph_buf if s.strip())
             if text:
-                html_parts.append(f"<p>{escape(text)}</p>")
+                html_parts.append(f"<p>{_inline_fallback(text)}</p>")
             paragraph_buf = []
 
     for line in lines:
@@ -43,16 +67,16 @@ def markdown_to_html(clean_content: str) -> str:
 
         if s.startswith("### "):
             flush_paragraph()
-            html_parts.append(f"<h3>{escape(s[4:].strip())}</h3>")
+            html_parts.append(f"<h3>{_inline_fallback(s[4:].strip())}</h3>")
         elif s.startswith("## "):
             flush_paragraph()
-            html_parts.append(f"<h2>{escape(s[3:].strip())}</h2>")
+            html_parts.append(f"<h2>{_inline_fallback(s[3:].strip())}</h2>")
         elif s.startswith("# "):
             flush_paragraph()
-            html_parts.append(f"<h1>{escape(s[2:].strip())}</h1>")
+            html_parts.append(f"<h1>{_inline_fallback(s[2:].strip())}</h1>")
         elif s.startswith("- "):
             flush_paragraph()
-            html_parts.append(f"<li>{escape(s[2:].strip())}</li>")
+            html_parts.append(f"<li>{_inline_fallback(s[2:].strip())}</li>")
         else:
             paragraph_buf.append(s)
 
