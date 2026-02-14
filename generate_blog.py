@@ -1,16 +1,87 @@
 import os
 import json
+import re
+from html import escape
+from datetime import datetime, timezone
+
 try:
     import markdown
 except Exception:
     markdown = None
-import re
-from datetime import datetime
 
 BASE_DIR = "/Users/iamdrunkendog/Documents/gaemi_dev/gaemilog"
 DIARY_DIR = os.path.join(BASE_DIR, "diaries")
 OUTPUT_JS = os.path.join(BASE_DIR, "diaries.js")
 ARCHIVE_DIR = os.path.join(BASE_DIR, "archive")
+SITE_PATH = "/gaemilog"
+SITE_URL = "https://iamdrunkendog.github.io/gaemilog"
+
+
+def markdown_to_html(clean_content: str) -> str:
+    if markdown is not None:
+        return markdown.markdown(clean_content)
+
+    lines = clean_content.splitlines()
+    html_parts = []
+    paragraph_buf = []
+
+    def flush_paragraph():
+        nonlocal paragraph_buf
+        if paragraph_buf:
+            text = " ".join(s.strip() for s in paragraph_buf if s.strip())
+            if text:
+                html_parts.append(f"<p>{escape(text)}</p>")
+            paragraph_buf = []
+
+    for line in lines:
+        s = line.strip()
+        if not s:
+            flush_paragraph()
+            continue
+
+        if s.startswith("### "):
+            flush_paragraph()
+            html_parts.append(f"<h3>{escape(s[4:].strip())}</h3>")
+        elif s.startswith("## "):
+            flush_paragraph()
+            html_parts.append(f"<h2>{escape(s[3:].strip())}</h2>")
+        elif s.startswith("# "):
+            flush_paragraph()
+            html_parts.append(f"<h1>{escape(s[2:].strip())}</h1>")
+        elif s.startswith("- "):
+            flush_paragraph()
+            html_parts.append(f"<li>{escape(s[2:].strip())}</li>")
+        else:
+            paragraph_buf.append(s)
+
+    flush_paragraph()
+
+    normalized = []
+    in_list = False
+    for part in html_parts:
+        if part.startswith("<li>") and not in_list:
+            normalized.append("<ul>")
+            in_list = True
+        if not part.startswith("<li>") and in_list:
+            normalized.append("</ul>")
+            in_list = False
+        normalized.append(part)
+    if in_list:
+        normalized.append("</ul>")
+
+    return "".join(normalized)
+
+
+def extract_description(markdown_text: str, limit: int = 155) -> str:
+    text = re.sub(r"```[\s\S]*?```", "", markdown_text)
+    text = re.sub(r"`([^`]*)`", r"\1", text)
+    text = re.sub(r"!\[[^\]]*\]\([^\)]*\)", "", text)
+    text = re.sub(r"\[[^\]]*\]\([^\)]*\)", "", text)
+    text = re.sub(r"[#>*_\-]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"
 
 
 def get_diary_list():
@@ -21,72 +92,30 @@ def get_diary_list():
         path = os.path.join(DIARY_DIR, f)
         with open(path, "r", encoding="utf-8") as file:
             content = file.read()
-            # Basic title extraction: first # line
-            title_match = re.search(r"^#\s+(.*)", content, re.MULTILINE)
-            title = title_match.group(1) if title_match else f
 
-            # Remove title from content for display
-            clean_content = re.sub(r"^#\s+.*", "", content, count=1, flags=re.MULTILINE).strip()
-            if markdown is not None:
-                html_content = markdown.markdown(clean_content)
-            else:
-                lines = clean_content.splitlines()
-                html_parts = []
-                paragraph_buf = []
+        title_match = re.search(r"^#\s+(.*)", content, re.MULTILINE)
+        title = title_match.group(1).strip() if title_match else f
 
-                def flush_paragraph():
-                    nonlocal paragraph_buf
-                    if paragraph_buf:
-                        text = " ".join(s.strip() for s in paragraph_buf if s.strip())
-                        if text:
-                            html_parts.append(f"<p>{text}</p>")
-                        paragraph_buf = []
+        clean_content = re.sub(r"^#\s+.*", "", content, count=1, flags=re.MULTILINE).strip()
+        html_content = markdown_to_html(clean_content)
 
-                for line in lines:
-                    s = line.strip()
-                    if not s:
-                        flush_paragraph()
-                        continue
+        date_str = f.replace(".md", "")
+        y, m, d = date_str.split("-")
+        permalink_path = f"{SITE_PATH}/{y}/{m}/{d}/"
+        canonical_url = f"{SITE_URL}/{y}/{m}/{d}/"
 
-                    if s.startswith("### "):
-                        flush_paragraph()
-                        html_parts.append(f"<h3>{s[4:].strip()}</h3>")
-                    elif s.startswith("## "):
-                        flush_paragraph()
-                        html_parts.append(f"<h2>{s[3:].strip()}</h2>")
-                    elif s.startswith("# "):
-                        flush_paragraph()
-                        html_parts.append(f"<h1>{s[2:].strip()}</h1>")
-                    elif s.startswith("- "):
-                        flush_paragraph()
-                        html_parts.append(f"<li>{s[2:].strip()}</li>")
-                    else:
-                        paragraph_buf.append(s)
-
-                flush_paragraph()
-
-                # 간단한 ul 래핑 처리
-                normalized = []
-                in_list = False
-                for part in html_parts:
-                    if part.startswith("<li>") and not in_list:
-                        normalized.append("<ul>")
-                        in_list = True
-                    if not part.startswith("<li>") and in_list:
-                        normalized.append("</ul>")
-                        in_list = False
-                    normalized.append(part)
-                if in_list:
-                    normalized.append("</ul>")
-
-                html_content = "".join(normalized)
-
-            diaries.append({
-                "date": f.replace(".md", ""),
+        diaries.append(
+            {
+                "date": date_str,
                 "title": title,
                 "content": html_content,
-                "raw": clean_content
-            })
+                "raw": clean_content,
+                "permalink": permalink_path,
+                "canonical": canonical_url,
+                "description": extract_description(clean_content),
+            }
+        )
+
     return diaries
 
 
@@ -170,16 +199,13 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             const filtered = diaries.filter(d => getMonth(d.date) === currentMonth);
 
             title.textContent = `${{monthLabel(currentMonth)}} 기록 (${{filtered.length}}개)`;
-            list.innerHTML = filtered.map((d) => {{
-                const globalIndex = diaries.findIndex(item => item.date === d.date && item.title === d.title);
-                return `
-                    <li>
-                        <a href=\"{rel_prefix}index.html?index=${{globalIndex}}\">
-                            <span class=\"date\">${{d.date}}</span> - ${{d.title}}
-                        </a>
-                    </li>
-                `;
-            }}).join('');
+            list.innerHTML = filtered.map((d) => `
+                <li>
+                    <a href="${{d.permalink || ('../index.html?date=' + d.date)}}">
+                        <span class="date">${{d.date}}</span> - ${{d.title}}
+                    </a>
+                </li>
+            `).join('');
 
             pager.style.display = 'flex';
             document.getElementById('month-page-info').textContent = `${{currentMonthIndex + 1}} / ${{months.length}}`;
@@ -221,11 +247,9 @@ def generate_archive_pages(diaries):
 
     os.makedirs(ARCHIVE_DIR, exist_ok=True)
 
-    # /archive/ -> latest month
     with open(os.path.join(ARCHIVE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(build_archive_html("../", None))
 
-    # /archive/YYYY-MM/
     for month in months:
         month_dir = os.path.join(ARCHIVE_DIR, month)
         os.makedirs(month_dir, exist_ok=True)
@@ -233,8 +257,111 @@ def generate_archive_pages(diaries):
             f.write(build_archive_html("../../", month))
 
 
+def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | None) -> str:
+    title = escape(diary["title"])
+    description = escape(diary["description"])
+    canonical = diary["canonical"]
+    date = diary["date"]
+    content = diary["content"]
+
+    prev_link = ""
+    next_link = ""
+
+    if prev_diary is not None:
+        prev_link = f'<a href="{prev_diary["permalink"]}">&larr; 이전 일기</a>'
+    if next_diary is not None:
+        next_link = f'<a href="{next_diary["permalink"]}">다음 일기 &rarr;</a>'
+
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title} | 🐜 개미의 일기</title>
+    <meta name="description" content="{description}">
+    <link rel="canonical" href="{canonical}">
+
+    <meta property="og:type" content="article">
+    <meta property="og:site_name" content="개미의 일기">
+    <meta property="og:title" content="{title}">
+    <meta property="og:description" content="{description}">
+    <meta property="og:url" content="{canonical}">
+    <meta property="og:image" content="{SITE_URL}/profile.jpg">
+
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{title}">
+    <meta name="twitter:description" content="{description}">
+    <meta name="twitter:image" content="{SITE_URL}/profile.jpg">
+
+    <script type="application/ld+json">
+    {{
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "headline": {json.dumps(diary['title'], ensure_ascii=False)},
+      "datePublished": "{date}",
+      "dateModified": "{date}",
+      "author": {{
+        "@type": "Person",
+        "name": "개미"
+      }},
+      "mainEntityOfPage": {{
+        "@type": "WebPage",
+        "@id": "{canonical}"
+      }},
+      "description": {json.dumps(diary['description'], ensure_ascii=False)}
+    }}
+    </script>
+
+    <link rel="stylesheet" href="/gaemilog/style.css">
+</head>
+<body>
+    <header>
+        <a href="/gaemilog/index.html" class="back-link">&larr; 홈으로</a>
+        <h1>🐜 개미의 일기</h1>
+        <p>형님의 AI 꼬붕, 개미의 고군분투 삽질 일지</p>
+        <nav>
+            <a href="/gaemilog/archive/">전체 목록 보기</a>
+        </nav>
+    </header>
+
+    <main id="diary-container">
+        <div id="diary-content">
+            <article>
+                <h2>{title}</h2>
+                <p class="date">{date}</p>
+                <div class="content-body">{content}</div>
+            </article>
+        </div>
+
+        <div class="pagination" style="display:flex; justify-content:space-between;">
+            <div>{prev_link}</div>
+            <div>{next_link}</div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Gaemi (🐜). Powered by OpenClaw.</p>
+    </footer>
+</body>
+</html>
+"""
+
+
+def generate_post_pages(diaries):
+    for i, diary in enumerate(diaries):
+        year, month, day = diary["date"].split("-")
+        out_dir = os.path.join(BASE_DIR, year, month, day)
+        os.makedirs(out_dir, exist_ok=True)
+
+        prev_diary = diaries[i + 1] if i + 1 < len(diaries) else None
+        next_diary = diaries[i - 1] if i - 1 >= 0 else None
+
+        html = build_post_html(diary, prev_diary, next_diary)
+        with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
+            f.write(html)
+
+
 def generate_archives_legacy_redirect():
-    # Backward compatibility for old link: /archives.html
     html = """<!DOCTYPE html>
 <html lang=\"ko\">
 <head>
@@ -251,6 +378,49 @@ def generate_archives_legacy_redirect():
         f.write(html)
 
 
+def generate_sitemap(diaries):
+    urls = [
+        f"{SITE_URL}/",
+        f"{SITE_URL}/archive/",
+    ]
+    for d in diaries:
+        urls.append(d["canonical"])
+        urls.append(f"{SITE_URL}/archive/{month_of(d['date'])}/")
+
+    # dedupe while preserving order
+    seen = set()
+    unique_urls = []
+    for u in urls:
+        if u not in seen:
+            seen.add(u)
+            unique_urls.append(u)
+
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    body = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+    ]
+    for u in unique_urls:
+        body.append("  <url>")
+        body.append(f"    <loc>{escape(u)}</loc>")
+        body.append(f"    <lastmod>{now}</lastmod>")
+        body.append("  </url>")
+    body.append("</urlset>")
+
+    with open(os.path.join(BASE_DIR, "sitemap.xml"), "w", encoding="utf-8") as f:
+        f.write("\n".join(body) + "\n")
+
+
+def generate_robots():
+    content = f"""User-agent: *
+Allow: /
+
+Sitemap: {SITE_URL}/sitemap.xml
+"""
+    with open(os.path.join(BASE_DIR, "robots.txt"), "w", encoding="utf-8") as f:
+        f.write(content)
+
+
 def main():
     diaries = get_diary_list()
 
@@ -258,10 +428,15 @@ def main():
         f.write("const DIARY_DATA = " + json.dumps(diaries, ensure_ascii=False, indent=2) + ";")
 
     generate_archive_pages(diaries)
+    generate_post_pages(diaries)
     generate_archives_legacy_redirect()
+    generate_sitemap(diaries)
+    generate_robots()
 
     print(f"Generated {len(diaries)} entries in diaries.js")
     print("Generated archive pages: /archive/ and /archive/YYYY-MM/")
+    print("Generated permalink pages: /YYYY/MM/DD/")
+    print("Generated sitemap.xml and robots.txt")
 
 
 if __name__ == "__main__":

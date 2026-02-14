@@ -67,16 +67,13 @@
             const filtered = diaries.filter(d => getMonth(d.date) === currentMonth);
 
             title.textContent = `${monthLabel(currentMonth)} 기록 (${filtered.length}개)`;
-            list.innerHTML = filtered.map((d) => {
-                const globalIndex = diaries.findIndex(item => item.date === d.date && item.title === d.title);
-                return `
-                    <li>
-                        <a href="../index.html?index=${globalIndex}">
-                            <span class="date">${d.date}</span> - ${d.title}
-                        </a>
-                    </li>
-                `;
-            }).join('');
+            list.innerHTML = filtered.map((d) => `
+                <li>
+                    <a href="${d.permalink || ('../index.html?date=' + d.date)}">
+                        <span class="date">${d.date}</span> - ${d.title}
+                    </a>
+                </li>
+            `).join('');
 
             pager.style.display = 'flex';
             document.getElementById('month-page-info').textContent = `${currentMonthIndex + 1} / ${months.length}`;
