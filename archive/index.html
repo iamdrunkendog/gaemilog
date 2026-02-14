@@ -133,20 +133,46 @@
 
             monthBtn.textContent = `${monthLabel(currentMonth)} ▾`;
 
-            monthMenu.innerHTML = months.map((m) => {
-                const active = m === currentMonth;
-                return `<button type="button" class="month-menu-item${active ? ' active' : ''}" data-month="${m}" role="option" aria-selected="${active ? 'true' : 'false'}">${monthLabel(m)}</button>`;
-            }).join('');
+            const monthSet = new Set(months);
+            let pickerYear = Number(currentMonth.slice(0, 4));
+
+            function renderMonthPicker(year) {
+                const monthCells = Array.from({ length: 12 }, (_, i) => {
+                    const mm = String(i + 1).padStart(2, '0');
+                    const key = `${year}-${mm}`;
+                    const enabled = monthSet.has(key);
+                    const active = key === currentMonth;
+                    return `<button type="button" class="month-menu-item${active ? ' active' : ''}" data-month="${key}" ${enabled ? '' : 'disabled'}>${i + 1}월</button>`;
+                }).join('');
+
+                monthMenu.innerHTML = `
+                    <div class="month-picker-head">
+                        <button type="button" class="month-year-nav" data-year-nav="-1" aria-label="이전 연도">&larr;</button>
+                        <strong>${year}년</strong>
+                        <button type="button" class="month-year-nav" data-year-nav="1" aria-label="다음 연도">&rarr;</button>
+                    </div>
+                    <div class="month-picker-grid">${monthCells}</div>
+                    <p class="month-picker-note">회색 달은 아직 일기 없음</p>
+                `;
+            }
 
             monthBtn.onclick = () => {
                 const isOpen = !monthMenu.hidden;
                 monthMenu.hidden = isOpen;
                 monthBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+                if (!isOpen) renderMonthPicker(pickerYear);
             };
 
             monthMenu.addEventListener('click', (e) => {
+                const yearNav = e.target.closest('.month-year-nav');
+                if (yearNav) {
+                    pickerYear += Number(yearNav.getAttribute('data-year-nav') || '0');
+                    renderMonthPicker(pickerYear);
+                    return;
+                }
+
                 const item = e.target.closest('.month-menu-item');
-                if (!item) return;
+                if (!item || item.disabled) return;
                 const picked = item.getAttribute('data-month');
                 if (!picked) return;
                 window.location.href = monthPath(picked);
