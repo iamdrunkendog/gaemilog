@@ -13,17 +13,20 @@
 
 ```text
 gaemilog/
-├─ index.html                # 메인(일기 단건 뷰 + 이전/다음)
+├─ index.html                     # 메인(최신 일기 뷰)
 ├─ archive/
-│  ├─ index.html             # 월별 아카이브 진입(최신 월)
-│  └─ YYYY-MM/index.html     # 월별 아카이브 페이지
-├─ archives.html             # 레거시 링크 호환용(archive/로 리다이렉트)
+│  ├─ index.html                  # 월별 아카이브 진입(최신 월)
+│  └─ YYYY-MM/index.html          # 월별 아카이브 + 캘린더
+├─ YYYY/MM/DD/index.html          # 날짜형 퍼머링크 글 페이지
+├─ archives.html                  # 레거시 링크 호환용(archive/로 리다이렉트)
 ├─ diaries/
-│  └─ YYYY-MM-DD.md          # 원본 일기 마크다운
-├─ diaries.js                # 정적 데이터 번들(DIARY_DATA)
-├─ generate_blog.py          # 마크다운 → 정적 페이지/데이터 생성기
-├─ style.css                 # 공통 스타일
-├─ profile.jpg               # 프로필 이미지
+│  └─ YYYY-MM-DD.md               # 원본 일기 마크다운
+├─ diaries.js                     # 정적 데이터 번들(DIARY_DATA)
+├─ sitemap.xml                    # SEO용 사이트맵
+├─ robots.txt                     # 크롤러 정책
+├─ generate_blog.py               # 마크다운 → 정적 페이지/SEO 산출물 생성기
+├─ style.css                      # 공통 스타일
+├─ profile.jpg                    # 프로필 이미지
 └─ README.md
 ```
 
@@ -37,14 +40,35 @@ gaemilog/
 3. 생성기에서:
    - `diaries.js` 갱신
    - `archive/index.html`, `archive/YYYY-MM/index.html` 재생성
+   - `YYYY/MM/DD/index.html` 날짜형 글 페이지 생성
+   - `sitemap.xml`, `robots.txt` 생성
    - `archives.html` 리다이렉트 페이지 갱신
-4. `index.html`은 `diaries.js`를 읽어 글을 렌더링
+4. `index.html`은 `diaries.js`를 읽어 글을 렌더링하고,
+   아카이브/퍼머링크 페이지는 정적 HTML로 바로 노출됨
 
 ### 마크다운 처리
 - 생성기(`generate_blog.py`)가 본문을 HTML로 변환해 `content`에 저장
 - 동시에 원문 마크다운(`raw`)도 `diaries.js`에 저장
 - 브라우저(`index.html`)에서 `marked.js`를 사용해 `raw`를 우선 렌더링
   - 결과적으로 제목(`##`), 리스트, 인용문, 코드 블록 등 마크다운이 안정적으로 표시됨
+
+### 퍼머링크/아카이브 내비게이션
+- 각 글은 날짜형 URL로 생성됩니다.
+  - 예: `/2026/02/13/`
+- 글 상세 하단에는 `이전일기`(왼쪽) / `다음일기`(오른쪽) 링크가 표시됩니다.
+- 아카이브(`/archive/`, `/archive/YYYY-MM/`) 상단에는:
+  - 선택 월 표시(예: `2026년 2월`)
+  - 이전 달/다음 달 이동
+  - 월 선택기(년/월 직접 선택)
+  - 일기 유무가 구분된 캘린더(클릭 시 해당 일기 이동)
+
+### SEO 대응
+- 글별 페이지에 아래 메타가 포함됩니다.
+  - `meta description`, `canonical`
+  - Open Graph(`og:title`, `og:description`, `og:url`, `og:image`)
+  - Twitter Card
+  - JSON-LD(`BlogPosting`)
+- 루트에 `sitemap.xml`, `robots.txt`를 생성합니다.
 
 ---
 
@@ -112,9 +136,9 @@ git push origin master
 ## 6) GitHub Pages 배포 전제
 
 - Git remote `origin`이 유효한 저장소로 연결되어 있어야 함
-  - (보안상 README에는 실제 저장소 URL을 하드코딩하지 않음)
 - 배포 브랜치: `master`
 - GitHub Pages가 `master`(root) 기준으로 서빙되도록 설정되어 있어야 함
+- 사이트 기준 URL은 `https://iamdrunkendog.github.io/gaemilog` 를 사용
 
 ### 자주 겪는 문제
 - **프로필 이미지가 안 보임(alt만 보임)**
@@ -131,11 +155,12 @@ git push origin master
 
 다른 에이전트가 이어받을 때 아래만 확인하면 됩니다.
 
-1. `generate_blog.py`가 현재 산출물 포맷(`title/content/raw`)을 유지하는가?
-2. `index.html`이 `marked.js` + `raw` 렌더링을 유지하는가?
-3. `archive/` 구조가 `/archive/`, `/archive/YYYY-MM/`로 유지되는가?
-4. 일기 규칙(요약 제목/디테일 3~5개/마지막 한 줄)이 프롬프트에 반영되어 있는가?
-5. push 권한(로컬 GitHub 인증)이 살아 있는가?
+1. `generate_blog.py`가 산출물 포맷(`title/content/raw/permalink/canonical/description`)을 유지하는가?
+2. 날짜형 퍼머링크(`/YYYY/MM/DD/`)가 정상 생성되는가?
+3. `archive/` 구조가 `/archive/`, `/archive/YYYY-MM/`로 유지되고 캘린더/월 이동이 동작하는가?
+4. 글 상세의 `이전일기/다음일기` 링크가 좌/우 배치로 동작하는가?
+5. `sitemap.xml`, `robots.txt`가 최신으로 생성되는가?
+6. push 권한(로컬 GitHub 인증)이 살아 있는가?
 
 ---
 
