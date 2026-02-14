@@ -153,6 +153,14 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             <a id=\"next-month-link\" class=\"month-link\" href=\"#\">다음 달 &rarr;</a>
         </div>
 
+        <section class=\"calendar-card\" id=\"calendar-card\" style=\"display:none;\">
+            <div class=\"calendar-weekdays\">
+                <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div class=\"calendar-grid\" id=\"calendar-grid\"></div>
+            <p class=\"calendar-help\">노란 점 있는 날짜 = 일기 있음 (클릭 이동)</p>
+        </section>
+
         <ul id=\"archives-list\" class=\"archives-list\">
             <li>목록을 불러오는 중입니다.</li>
         </ul>
@@ -179,6 +187,40 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             return `${{y}}년 ${{Number(m)}}월`;
         }}
 
+        function renderCalendar(month, diariesInMonth) {{
+            const card = document.getElementById('calendar-card');
+            const grid = document.getElementById('calendar-grid');
+            if (!month || !grid) return;
+
+            const [year, mm] = month.split('-').map(Number);
+            const firstDay = new Date(year, mm - 1, 1).getDay();
+            const daysInMonth = new Date(year, mm, 0).getDate();
+
+            const byDate = new Map(diariesInMonth.map(d => [d.date, d]));
+            const cells = [];
+
+            for (let i = 0; i < firstDay; i++) {{
+                cells.push('<span class="calendar-day empty"></span>');
+            }}
+
+            for (let day = 1; day <= daysInMonth; day++) {{
+                const dateStr = `${{year}}-${{String(mm).padStart(2, '0')}}-${{String(day).padStart(2, '0')}}`;
+                const diary = byDate.get(dateStr);
+                if (diary) {{
+                    cells.push(`
+                        <a class="calendar-day has-entry" href="${{diary.permalink || ('../index.html?date=' + diary.date)}}" title="${{diary.date}} · ${{diary.title}}">
+                            <span>${{day}}</span><em class="dot"></em>
+                        </a>
+                    `);
+                }} else {{
+                    cells.push(`<span class="calendar-day no-entry"><span>${{day}}</span></span>`);
+                }}
+            }}
+
+            grid.innerHTML = cells.join('');
+            card.style.display = 'block';
+        }}
+
         function init() {{
             const diaries = typeof DIARY_DATA !== 'undefined' ? DIARY_DATA : [];
             const list = document.getElementById('archives-list');
@@ -199,6 +241,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             const filtered = diaries.filter(d => getMonth(d.date) === currentMonth);
 
             title.textContent = `${{monthLabel(currentMonth)}} 기록 (${{filtered.length}}개)`;
+            renderCalendar(currentMonth, filtered);
             list.innerHTML = filtered.map((d) => `
                 <li>
                     <a href="${{d.permalink || ('../index.html?date=' + d.date)}}">
@@ -268,9 +311,9 @@ def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | Non
     next_link = ""
 
     if prev_diary is not None:
-        prev_link = f'<a href="{prev_diary["permalink"]}">&larr; 이전 일기</a>'
+        prev_link = f'<a class="pager-link" href="{prev_diary["permalink"]}">&larr; 이전 일기</a>'
     if next_diary is not None:
-        next_link = f'<a href="{next_diary["permalink"]}">다음 일기 &rarr;</a>'
+        next_link = f'<a class="pager-link" href="{next_diary["permalink"]}">다음 일기 &rarr;</a>'
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
