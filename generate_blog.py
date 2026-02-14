@@ -394,13 +394,15 @@ def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | Non
     date = diary["date"]
     content = diary["content"]
 
-    prev_link = ""
-    next_link = ""
-
     if prev_diary is not None:
         prev_link = f'<a class="pager-link" href="{prev_diary["permalink"]}">&larr; 이전일기</a>'
+    else:
+        prev_link = '<span class="pager-link is-disabled" aria-disabled="true">&larr; 이전일기</span>'
+
     if next_diary is not None:
         next_link = f'<a class="pager-link" href="{next_diary["permalink"]}">다음일기 &rarr;</a>'
+    else:
+        next_link = '<span class="pager-link is-disabled" aria-disabled="true">다음일기 &rarr;</span>'
 
     return f"""<!DOCTYPE html>
 <html lang="ko">

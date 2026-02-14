@@ -180,6 +180,13 @@ article:hover {
     filter: brightness(0.97);
 }
 
+.pager-link.is-disabled {
+    background: #e7e7e7;
+    color: #9a9a9a;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .calendar-card {
     background: white;
     border-radius: 12px;
