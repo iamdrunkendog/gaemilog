@@ -13,8 +13,10 @@ BASE_DIR = "/Users/iamdrunkendog/Documents/gaemi_dev/gaemilog"
 DIARY_DIR = os.path.join(BASE_DIR, "diaries")
 OUTPUT_JS = os.path.join(BASE_DIR, "diaries.js")
 ARCHIVE_DIR = os.path.join(BASE_DIR, "archive")
-SITE_PATH = "/gaemilog"
-SITE_URL = "https://iamdrunkendog.github.io/gaemilog"
+# Custom domain is now mapped directly to this Pages site root.
+# Keep SITE_PATH empty so permalinks become /YYYY/MM/DD/.
+SITE_PATH = ""
+SITE_URL = "https://blog.gaemi.kim"
 
 
 def markdown_to_html(clean_content: str) -> str:
@@ -149,9 +151,11 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
     <main>
         <div class=\"calendar-toolbar\" id=\"calendar-toolbar\" style=\"display:none;\">
             <a id=\"prev-month-link\" class=\"month-link\" href=\"#\">&larr; 이전 달</a>
-            <button id=\"month-picker-btn\" class=\"month-picker-btn\" type=\"button\">-</button>
+            <div class=\"month-picker-wrap\">
+                <button id=\"month-picker-btn\" class=\"month-picker-btn\" type=\"button\" aria-haspopup=\"listbox\" aria-expanded=\"false\">-</button>
+                <div id=\"month-picker-menu\" class=\"month-picker-menu\" role=\"listbox\" aria-label=\"월 선택\" hidden></div>
+            </div>
             <a id=\"next-month-link\" class=\"month-link\" href=\"#\">다음 달 &rarr;</a>
-            <input id=\"month-picker-input\" type=\"month\" style=\"display:none;\" />
         </div>
 
         <section class=\"calendar-card\" id=\"calendar-card\" style=\"display:none;\">
@@ -259,21 +263,35 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             const prevLink = document.getElementById('prev-month-link');
             const nextLink = document.getElementById('next-month-link');
             const monthBtn = document.getElementById('month-picker-btn');
-            const monthInput = document.getElementById('month-picker-input');
+            const monthMenu = document.getElementById('month-picker-menu');
 
             monthBtn.textContent = `${{monthLabel(currentMonth)}} ▾`;
-            monthInput.value = currentMonth;
 
-            monthBtn.onclick = () => monthInput.showPicker ? monthInput.showPicker() : monthInput.click();
-            monthInput.onchange = () => {{
-                const picked = monthInput.value;
-                if (!picked) return;
-                if (months.includes(picked)) {{
-                    window.location.href = monthPath(picked);
-                }} else {{
-                    alert('해당 월에는 아직 일기가 없어요.');
-                }}
+            monthMenu.innerHTML = months.map((m) => {{
+                const active = m === currentMonth;
+                return `<button type="button" class="month-menu-item${{active ? ' active' : ''}}" data-month="${{m}}" role="option" aria-selected="${{active ? 'true' : 'false'}}">${{monthLabel(m)}}</button>`;
+            }}).join('');
+
+            monthBtn.onclick = () => {{
+                const isOpen = !monthMenu.hidden;
+                monthMenu.hidden = isOpen;
+                monthBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
             }};
+
+            monthMenu.addEventListener('click', (e) => {{
+                const item = e.target.closest('.month-menu-item');
+                if (!item) return;
+                const picked = item.getAttribute('data-month');
+                if (!picked) return;
+                window.location.href = monthPath(picked);
+            }});
+
+            document.addEventListener('click', (e) => {{
+                if (!monthMenu.hidden && !e.target.closest('.month-picker-wrap')) {{
+                    monthMenu.hidden = true;
+                    monthBtn.setAttribute('aria-expanded', 'false');
+                }}
+            }});
 
             if (prevMonth) {{
                 prevLink.href = monthPath(prevMonth);
@@ -371,15 +389,15 @@ def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | Non
     }}
     </script>
 
-    <link rel="stylesheet" href="/gaemilog/style.css">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <header>
-        <a href="/gaemilog/index.html" class="back-link">&larr; 홈으로</a>
+        <a href="/index.html" class="back-link">&larr; 홈으로</a>
         <h1>🐜 개미의 일기</h1>
         <p>형님의 AI 꼬붕, 개미의 고군분투 삽질 일지</p>
         <nav>
-            <a href="/gaemilog/archive/">전체 목록 보기</a>
+            <a href="/archive/">전체 목록 보기</a>
         </nav>
     </header>
 

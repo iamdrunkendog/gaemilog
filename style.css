@@ -78,6 +78,10 @@ article:hover {
     color: #ffcc00;
 }
 
+.month-picker-wrap {
+    position: relative;
+}
+
 .month-picker-btn {
     border: 1px solid #eee;
     background: #fff;
@@ -86,6 +90,40 @@ article:hover {
     padding: 0.45rem 0.8rem;
     font-weight: 700;
     cursor: pointer;
+}
+
+.month-picker-menu {
+    position: absolute;
+    top: calc(100% + 0.35rem);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 160px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    padding: 0.35rem;
+    z-index: 20;
+}
+
+.month-menu-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: #333;
+    border-radius: 8px;
+    padding: 0.5rem 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.month-menu-item:hover,
+.month-menu-item.active {
+    background: #fff6cc;
 }
 
 .pager-link {

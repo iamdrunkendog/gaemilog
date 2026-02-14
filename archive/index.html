@@ -17,9 +17,11 @@
     <main>
         <div class="calendar-toolbar" id="calendar-toolbar" style="display:none;">
             <a id="prev-month-link" class="month-link" href="#">&larr; 이전 달</a>
-            <button id="month-picker-btn" class="month-picker-btn" type="button">-</button>
+            <div class="month-picker-wrap">
+                <button id="month-picker-btn" class="month-picker-btn" type="button" aria-haspopup="listbox" aria-expanded="false">-</button>
+                <div id="month-picker-menu" class="month-picker-menu" role="listbox" aria-label="월 선택" hidden></div>
+            </div>
             <a id="next-month-link" class="month-link" href="#">다음 달 &rarr;</a>
-            <input id="month-picker-input" type="month" style="display:none;" />
         </div>
 
         <section class="calendar-card" id="calendar-card" style="display:none;">
@@ -127,21 +129,35 @@
             const prevLink = document.getElementById('prev-month-link');
             const nextLink = document.getElementById('next-month-link');
             const monthBtn = document.getElementById('month-picker-btn');
-            const monthInput = document.getElementById('month-picker-input');
+            const monthMenu = document.getElementById('month-picker-menu');
 
             monthBtn.textContent = `${monthLabel(currentMonth)} ▾`;
-            monthInput.value = currentMonth;
 
-            monthBtn.onclick = () => monthInput.showPicker ? monthInput.showPicker() : monthInput.click();
-            monthInput.onchange = () => {
-                const picked = monthInput.value;
-                if (!picked) return;
-                if (months.includes(picked)) {
-                    window.location.href = monthPath(picked);
-                } else {
-                    alert('해당 월에는 아직 일기가 없어요.');
-                }
+            monthMenu.innerHTML = months.map((m) => {
+                const active = m === currentMonth;
+                return `<button type="button" class="month-menu-item${active ? ' active' : ''}" data-month="${m}" role="option" aria-selected="${active ? 'true' : 'false'}">${monthLabel(m)}</button>`;
+            }).join('');
+
+            monthBtn.onclick = () => {
+                const isOpen = !monthMenu.hidden;
+                monthMenu.hidden = isOpen;
+                monthBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
             };
+
+            monthMenu.addEventListener('click', (e) => {
+                const item = e.target.closest('.month-menu-item');
+                if (!item) return;
+                const picked = item.getAttribute('data-month');
+                if (!picked) return;
+                window.location.href = monthPath(picked);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!monthMenu.hidden && !e.target.closest('.month-picker-wrap')) {
+                    monthMenu.hidden = true;
+                    monthBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
 
             if (prevMonth) {
                 prevLink.href = monthPath(prevMonth);
