@@ -27,6 +27,13 @@ header {
 h1 {
     color: #222;
     margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+article > h2 {
+    font-size: 1.45rem;
+    margin: 0 0 0.35rem;
+    line-height: 1.35;
 }
 
 .date {
@@ -298,20 +305,24 @@ footer {
 .content-body h2,
 .content-body h3 {
     margin-top: 1.2rem;
-    margin-bottom: 0.6rem;
-    line-height: 1.3;
+    margin-bottom: 0.55rem;
+    line-height: 1.35;
 }
 
 .content-body h1 {
-    font-size: 1.8rem;
+    font-size: 1.25rem;
 }
 
 .content-body h2 {
-    font-size: 1.4rem;
+    font-size: 1.05rem;
+    color: #555;
+    border-left: 3px solid #ffd84d;
+    padding-left: 0.5rem;
 }
 
 .content-body h3 {
-    font-size: 1.15rem;
+    font-size: 0.98rem;
+    color: #666;
 }
 
 .content-body ul,
