@@ -55,7 +55,7 @@ article:hover {
     margin-top: 2rem;
 }
 
-.month-pagination {
+.calendar-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -64,16 +64,28 @@ article:hover {
     border-radius: 10px;
     padding: 0.75rem 1rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    gap: 0.6rem;
 }
 
 .month-link {
     text-decoration: none;
     color: #666;
     font-size: 0.92rem;
+    white-space: nowrap;
 }
 
 .month-link:hover {
     color: #ffcc00;
+}
+
+.month-picker-btn {
+    border: 1px solid #eee;
+    background: #fff;
+    color: #333;
+    border-radius: 8px;
+    padding: 0.45rem 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
 }
 
 .pager-link {

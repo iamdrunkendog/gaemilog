@@ -147,10 +147,11 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
     </header>
 
     <main>
-        <div class=\"month-pagination\" id=\"month-pagination\" style=\"display:none;\">
+        <div class=\"calendar-toolbar\" id=\"calendar-toolbar\" style=\"display:none;\">
             <a id=\"prev-month-link\" class=\"month-link\" href=\"#\">&larr; 이전 달</a>
-            <span id=\"month-page-info\">-</span>
+            <button id=\"month-picker-btn\" class=\"month-picker-btn\" type=\"button\">-</button>
             <a id=\"next-month-link\" class=\"month-link\" href=\"#\">다음 달 &rarr;</a>
+            <input id=\"month-picker-input\" type=\"month\" style=\"display:none;\" />
         </div>
 
         <section class=\"calendar-card\" id=\"calendar-card\" style=\"display:none;\">
@@ -225,7 +226,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             const diaries = typeof DIARY_DATA !== 'undefined' ? DIARY_DATA : [];
             const list = document.getElementById('archives-list');
             const title = document.getElementById('month-title');
-            const pager = document.getElementById('month-pagination');
+            const toolbar = document.getElementById('calendar-toolbar');
 
             if (diaries.length === 0) {{
                 list.innerHTML = '<li>작성된 일기가 없습니다.</li>';
@@ -250,19 +251,34 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
                 </li>
             `).join('');
 
-            pager.style.display = 'flex';
-            document.getElementById('month-page-info').textContent = `${{currentMonthIndex + 1}} / ${{months.length}}`;
+            toolbar.style.display = 'flex';
 
             const prevMonth = months[currentMonthIndex + 1] || null;
             const nextMonth = months[currentMonthIndex - 1] || null;
 
             const prevLink = document.getElementById('prev-month-link');
             const nextLink = document.getElementById('next-month-link');
+            const monthBtn = document.getElementById('month-picker-btn');
+            const monthInput = document.getElementById('month-picker-input');
+
+            monthBtn.textContent = `${{monthLabel(currentMonth)}} ▾`;
+            monthInput.value = currentMonth;
+
+            monthBtn.onclick = () => monthInput.showPicker ? monthInput.showPicker() : monthInput.click();
+            monthInput.onchange = () => {{
+                const picked = monthInput.value;
+                if (!picked) return;
+                if (months.includes(picked)) {{
+                    window.location.href = monthPath(picked);
+                }} else {{
+                    alert('해당 월에는 아직 일기가 없어요.');
+                }}
+            }};
 
             if (prevMonth) {{
                 prevLink.href = monthPath(prevMonth);
                 prevLink.style.visibility = 'visible';
-                prevLink.innerHTML = `&larr; 이전 달 (${{prevMonth}})`;
+                prevLink.innerHTML = `&larr; 이전 달`;
             }} else {{
                 prevLink.removeAttribute('href');
                 prevLink.style.visibility = 'hidden';
@@ -271,7 +287,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             if (nextMonth) {{
                 nextLink.href = monthPath(nextMonth);
                 nextLink.style.visibility = 'visible';
-                nextLink.innerHTML = `다음 달 (${{nextMonth}}) &rarr;`;
+                nextLink.innerHTML = `다음 달 &rarr;`;
             }} else {{
                 nextLink.removeAttribute('href');
                 nextLink.style.visibility = 'hidden';
@@ -311,9 +327,9 @@ def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | Non
     next_link = ""
 
     if prev_diary is not None:
-        prev_link = f'<a class="pager-link" href="{prev_diary["permalink"]}">&larr; 이전 날짜 일기 ({prev_diary["date"]})</a>'
+        prev_link = f'<a class="pager-link" href="{prev_diary["permalink"]}">&larr; 이전일기</a>'
     if next_diary is not None:
-        next_link = f'<a class="pager-link" href="{next_diary["permalink"]}">다음 날짜 일기 ({next_diary["date"]}) &rarr;</a>'
+        next_link = f'<a class="pager-link" href="{next_diary["permalink"]}">다음일기 &rarr;</a>'
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
