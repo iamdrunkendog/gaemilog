@@ -157,7 +157,8 @@
                 `;
             }
 
-            monthBtn.onclick = () => {
+            monthBtn.onclick = (e) => {
+                e.stopPropagation();
                 const isOpen = !monthMenu.hidden;
                 monthMenu.hidden = isOpen;
                 monthBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
@@ -165,6 +166,7 @@
             };
 
             monthMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
                 const yearNav = e.target.closest('.month-year-nav');
                 if (yearNav) {
                     pickerYear += Number(yearNav.getAttribute('data-year-nav') || '0');

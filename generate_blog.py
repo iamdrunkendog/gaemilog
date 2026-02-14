@@ -291,7 +291,8 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
                 `;
             }}
 
-            monthBtn.onclick = () => {{
+            monthBtn.onclick = (e) => {{
+                e.stopPropagation();
                 const isOpen = !monthMenu.hidden;
                 monthMenu.hidden = isOpen;
                 monthBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
@@ -299,6 +300,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             }};
 
             monthMenu.addEventListener('click', (e) => {{
+                e.stopPropagation();
                 const yearNav = e.target.closest('.month-year-nav');
                 if (yearNav) {{
                     pickerYear += Number(yearNav.getAttribute('data-year-nav') || '0');

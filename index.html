@@ -71,20 +71,23 @@
             `;
             
             document.getElementById('page-info').innerText = `${index + 1} / ${diaries.length}`;
-            document.getElementById('prev-btn').disabled = (index === 0);
-            document.getElementById('next-btn').disabled = (index === diaries.length - 1);
+            // diaries[0] is newest. "이전" -> older (index +1), "다음" -> newer (index -1)
+            document.getElementById('prev-btn').disabled = (index === diaries.length - 1);
+            document.getElementById('next-btn').disabled = (index === 0);
         }
 
         document.getElementById('prev-btn').onclick = () => {
-            if (currentIndex > 0) {
-                currentIndex--;
+            // 이전 일기: 더 과거 날짜
+            if (currentIndex < diaries.length - 1) {
+                currentIndex++;
                 renderDiary(currentIndex);
             }
         };
 
         document.getElementById('next-btn').onclick = () => {
-            if (currentIndex < diaries.length - 1) {
-                currentIndex++;
+            // 다음 일기: 더 최근 날짜
+            if (currentIndex > 0) {
+                currentIndex--;
                 renderDiary(currentIndex);
             }
         };
