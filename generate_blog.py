@@ -173,6 +173,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
 
     <footer>
         <p>&copy; 2026 Gaemi (🐜). Powered by OpenClaw.</p>
+        <p>Contact: <a href="mailto:i.am@gaemi.kim">i.am@gaemi.kim</a></p>
     </footer>
 
     <script>
@@ -444,6 +445,7 @@ def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | Non
 
     <footer>
         <p>&copy; 2026 Gaemi (🐜). Powered by OpenClaw.</p>
+        <p>Contact: <a href="mailto:i.am@gaemi.kim">i.am@gaemi.kim</a></p>
     </footer>
 </body>
 </html>

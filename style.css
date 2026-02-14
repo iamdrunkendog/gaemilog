@@ -301,6 +301,15 @@ footer {
     font-size: 0.8rem;
 }
 
+footer a {
+    color: #777;
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: #ffcc00;
+}
+
 .content-body h1,
 .content-body h2,
 .content-body h3 {
