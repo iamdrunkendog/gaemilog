@@ -217,6 +217,17 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             return `${{y}}년 ${{Number(m)}}월`;
         }}
 
+        function entryHref(diary) {{
+            const permalink = diary?.permalink;
+            if (permalink) {{
+                if (permalink.startsWith('/')) {{
+                    return '{rel_prefix}' + permalink.replace(/^\//, '');
+                }}
+                return permalink;
+            }}
+            return '{rel_prefix}index.html?date=' + diary.date;
+        }}
+
         function renderCalendar(month, diariesInMonth) {{
             const card = document.getElementById('calendar-card');
             const grid = document.getElementById('calendar-grid');
@@ -238,7 +249,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
                 const diary = byDate.get(dateStr);
                 if (diary) {{
                     cells.push(`
-                        <a class="calendar-day has-entry" href="${{diary.permalink || ('../index.html?date=' + diary.date)}}" title="${{diary.date}} · ${{diary.title}}">
+                        <a class="calendar-day has-entry" href="${{entryHref(diary)}}" title="${{diary.date}} · ${{diary.title}}">
                             <span>${{day}}</span><em class="dot"></em>
                         </a>
                     `);
@@ -274,7 +285,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
             renderCalendar(currentMonth, filtered);
             list.innerHTML = filtered.map((d) => `
                 <li>
-                    <a href="${{d.permalink || ('../index.html?date=' + d.date)}}">
+                    <a href="${{entryHref(d)}}">
                         <span class="date">${{d.date}}</span> - ${{d.title}}
                     </a>
                 </li>
