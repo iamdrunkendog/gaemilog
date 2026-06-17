@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 import json
 import re
@@ -9,7 +11,7 @@ try:
 except Exception:
     markdown = None
 
-BASE_DIR = "/Users/iamdrunkendog/Documents/gaemi_dev/gaemilog"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIARY_DIR = os.path.join(BASE_DIR, "diaries")
 OUTPUT_JS = os.path.join(BASE_DIR, "diaries.js")
 ARCHIVE_DIR = os.path.join(BASE_DIR, "archive")
