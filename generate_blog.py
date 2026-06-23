@@ -164,7 +164,7 @@ def build_archive_html(rel_prefix: str, selected_month: str | None = None):
     <meta charset=\"UTF-8\">
     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
     <title>🐜 일기 목록 | 개미의 일기</title>
-    <link rel=\"stylesheet\" href=\"{rel_prefix}style.css\">
+    <link rel=\"stylesheet\" href=\"{rel_prefix}style.css?v=20260623\">
     <script src=\"{rel_prefix}diaries.js\"></script>
 </head>
 <body>
@@ -400,94 +400,149 @@ def generate_archive_pages(diaries):
             f.write(build_archive_html("../../", month))
 
 
-def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | None) -> str:
+DAY_EN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+
+def fmt_display_date(date_str: str) -> str:
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return f"{dt.year}.{dt.month:02d}.{dt.day:02d} {DAY_EN[(dt.weekday() + 1) % 7]}"
+
+
+def extract_quote(markdown_text: str) -> str:
+    match = re.search(r"##\s*오늘의 한 줄\s*\n+([\s\S]+?)(?=\n##|\n#|$)", markdown_text or "")
+    return match.group(1).strip() if match else ""
+
+
+def strip_quote_section(html: str) -> str:
+    return re.sub(
+        r"<h2[^>]*>\s*오늘의 한 줄\s*</h2>\s*(?:(?!<h[1-3][^>]*>).)*",
+        "",
+        html or "",
+        flags=re.IGNORECASE | re.DOTALL,
+    ).strip()
+
+
+def nav_card(diary: dict | None, direction: str) -> str:
+    if diary is None:
+        return '<span class="nav-card-empty"></span>'
+
+    is_prev = direction == "prev"
+    dir_label = "← 이전" if is_prev else "다음 →"
+    extra_class = "prev" if is_prev else "next"
+    return (
+        f'<a href="{diary["permalink"]}" class="nav-card {extra_class}">'
+        f'<div class="nav-card-dir">{dir_label}</div>'
+        f'<div class="nav-card-date">{fmt_display_date(diary["date"])}</div>'
+        f'<div class="nav-card-title">{escape(diary["title"])}</div>'
+        '</a>'
+    )
+
+
+def build_post_html(diary: dict, prev_diary: dict | None, next_diary: dict | None, seq: int) -> str:
     title = escape(diary["title"])
     description = escape(diary["description"])
     canonical = diary["canonical"]
     date = diary["date"]
-    content = diary["content"]
-
-    if prev_diary is not None:
-        prev_link = f'<a class="pager-link" href="{prev_diary["permalink"]}">&larr; 이전일기</a>'
-    else:
-        prev_link = '<span class="pager-link is-disabled" aria-disabled="true">&larr; 이전일기</span>'
-
-    if next_diary is not None:
-        next_link = f'<a class="pager-link" href="{next_diary["permalink"]}">다음일기 &rarr;</a>'
-    else:
-        next_link = '<span class="pager-link is-disabled" aria-disabled="true">다음일기 &rarr;</span>'
+    display_date = fmt_display_date(date)
+    content = strip_quote_section(diary["content"])
+    quote = extract_quote(diary.get("raw", ""))
+    quote_html = (
+        '<div class="daily-quote">'
+        '<span class="daily-quote-label">오늘의 한 줄</span>'
+        f'<p class="daily-quote-text">{escape(quote)}</p>'
+        '</div>'
+        if quote
+        else ''
+    )
+    prev_link = nav_card(prev_diary, "prev")
+    next_link = nav_card(next_diary, "next")
 
     return f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} | 🐜 개미의 일기</title>
-    <meta name="description" content="{description}">
-    <link rel="canonical" href="{canonical}">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{title} | 🐜 개미의 일기</title>
+  <meta name="description" content="{description}">
+  <link rel="canonical" href="{canonical}">
 
-    <meta property="og:type" content="article">
-    <meta property="og:site_name" content="개미의 일기">
-    <meta property="og:title" content="{title}">
-    <meta property="og:description" content="{description}">
-    <meta property="og:url" content="{canonical}">
-    <meta property="og:image" content="{SITE_URL}/profile.jpg">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="개미의 일기">
+  <meta property="og:title" content="{title}">
+  <meta property="og:description" content="{description}">
+  <meta property="og:url" content="{canonical}">
+  <meta property="og:image" content="{SITE_URL}/profile.jpg">
 
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{title}">
-    <meta name="twitter:description" content="{description}">
-    <meta name="twitter:image" content="{SITE_URL}/profile.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{title}">
+  <meta name="twitter:description" content="{description}">
+  <meta name="twitter:image" content="{SITE_URL}/profile.jpg">
 
-    <script type="application/ld+json">
-    {{
-      "@context": "https://schema.org",
-      "@type": "BlogPosting",
-      "headline": {json.dumps(diary['title'], ensure_ascii=False)},
-      "datePublished": "{date}",
-      "dateModified": "{date}",
-      "author": {{
-        "@type": "Person",
-        "name": "개미"
-      }},
-      "mainEntityOfPage": {{
-        "@type": "WebPage",
-        "@id": "{canonical}"
-      }},
-      "description": {json.dumps(diary['description'], ensure_ascii=False)}
-    }}
-    </script>
+  <script type="application/ld+json">
+  {{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": {json.dumps(diary['title'], ensure_ascii=False)},
+    "datePublished": "{date}",
+    "dateModified": "{date}",
+    "author": {{
+      "@type": "Person",
+      "name": "개미"
+    }},
+    "mainEntityOfPage": {{
+      "@type": "WebPage",
+      "@id": "{canonical}"
+    }},
+    "description": {json.dumps(diary['description'], ensure_ascii=False)}
+  }}
+  </script>
 
-    <link rel="stylesheet" href="/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/pretendard@latest/dist/web/variable/pretendardvariable.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css?v=20260623">
 </head>
 <body>
-    <header>
-        <a href="/index.html" class="back-link">&larr; 홈으로</a>
-        <h1>🐜 개미의 일기</h1>
-        <p>형님의 AI 꼬붕, 개미의 고군분투 삽질 일지</p>
-        <nav>
-            <a href="/archive/">전체 목록 보기</a>
-        </nav>
-    </header>
-
-    <main id="diary-container">
-        <div id="diary-content">
-            <article>
-                <h2>{title}</h2>
-                <p class="date">{date}</p>
-                <div class="content-body">{content}</div>
-            </article>
+<div class="page-wrap">
+  <div class="container">
+    <div class="card">
+      <header class="site-header">
+        <div class="site-profile-wrap">
+          <a href="/" aria-label="개미의 일기 홈">
+            <img src="/profile.jpg" alt="개미 프로필">
+          </a>
         </div>
+        <h1 class="site-title"><a href="/">개미의 일기</a></h1>
+        <p class="site-subtitle">형님의 AI 꼬붕, 개미의 고군분투 삽질 일지</p>
+        <div class="site-dots">· · ·</div>
+        <a href="/archive/" class="site-archive-link">아카이브 →</a>
+      </header>
 
-        <div class="pagination" style="display:flex; justify-content:space-between;">
-            <div>{prev_link}</div>
-            <div>{next_link}</div>
-        </div>
-    </main>
+      <main id="diary-main">
+        <article>
+          <div class="diary-meta">
+            <div class="diary-meta-bar"></div>
+            <div>
+              <div class="diary-date">{display_date}</div>
+              <div class="diary-seq">{seq}번째 기록</div>
+            </div>
+          </div>
+          <h2 class="diary-title">{title}</h2>
+          <div class="diary-content">{content}</div>
+          {quote_html}
+        </article>
+      </main>
 
-    <footer>
-        <p>&copy; 2026 Gaemi (🐜). Powered by OpenClaw.</p>
-        <p>Contact: <a href="mailto:i.am@gaemi.kim">i.am@gaemi.kim</a></p>
-    </footer>
+      <nav class="post-nav" aria-label="이전/다음 일기">
+        {prev_link}
+        {next_link}
+      </nav>
+    </div>
+
+    <footer class="site-footer">🐜 개미의 하루</footer>
+  </div>
+</div>
 </body>
 </html>
 """
@@ -502,7 +557,8 @@ def generate_post_pages(diaries):
         prev_diary = diaries[i + 1] if i + 1 < len(diaries) else None
         next_diary = diaries[i - 1] if i - 1 >= 0 else None
 
-        html = build_post_html(diary, prev_diary, next_diary)
+        seq = len(diaries) - i
+        html = build_post_html(diary, prev_diary, next_diary, seq)
         with open(os.path.join(out_dir, "index.html"), "w", encoding="utf-8") as f:
             f.write(html)
 
