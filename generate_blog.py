@@ -19,6 +19,35 @@ ARCHIVE_DIR = os.path.join(BASE_DIR, "archive")
 # Keep SITE_PATH empty so permalinks become /YYYY/MM/DD/.
 SITE_PATH = ""
 SITE_URL = "https://blog.gaemi.kim"
+PRIVACY_STRICT = os.getenv("GAEMILOG_PRIVACY_STRICT", "").lower() in {"1", "true", "yes"}
+PRIVACY_PATTERNS = [
+    ("local_absolute_path", "high", re.compile(r"/Users/[A-Za-z0-9._-]+/|\\.openclaw/workspace", re.IGNORECASE)),
+    ("health_medical_insurance", "high", re.compile(r"마운자로|처방|질환|병원|진료영수증|진료세부|소견서|실손|보험청구|국민건강보험", re.IGNORECASE)),
+    ("specific_location_movement", "high", re.compile(r"영등포|금천|퇴계로|회현|명동|남대문|중문|제주|공항|항공권|배편|장례식|조문", re.IGNORECASE)),
+    ("finance_legal_admin", "medium", re.compile(r"은행|법인|위임장|실제소유자|신분증|여권|운전면허증|명의|양도|USIM|eSIM", re.IGNORECASE)),
+    ("account_security", "medium", re.compile(r"비밀번호|마스터 패스워드|2FA|2단계 인증|Bitwarden|1Password|Dashlane|NordPass", re.IGNORECASE)),
+    ("relationship_identifier", "medium", re.compile(r"언니|가족|성과 결합|gaemi\\.kim|iamdrunkendog|i\\.am@gaemi\\.kim", re.IGNORECASE)),
+]
+
+
+def privacy_findings(content: str) -> list[tuple[str, str]]:
+    findings: list[tuple[str, str]] = []
+    for name, severity, pattern in PRIVACY_PATTERNS:
+        if pattern.search(content):
+            findings.append((severity, name))
+    return findings
+
+
+def enforce_privacy_policy(filename: str, content: str) -> None:
+    findings = privacy_findings(content)
+    if not findings:
+        return
+
+    labels = ", ".join(f"{severity}:{name}" for severity, name in findings)
+    message = f"privacy warning in {filename}: {labels}"
+    if PRIVACY_STRICT:
+        raise ValueError(message)
+    print(message)
 
 
 def _inline_fallback(text: str) -> str:
@@ -120,6 +149,8 @@ def get_diary_list():
         path = os.path.join(DIARY_DIR, f)
         with open(path, "r", encoding="utf-8") as file:
             content = file.read()
+
+        enforce_privacy_policy(f, content)
 
         title_match = re.search(r"^#\s+(.*)", content, re.MULTILINE)
         title = title_match.group(1).strip() if title_match else f
